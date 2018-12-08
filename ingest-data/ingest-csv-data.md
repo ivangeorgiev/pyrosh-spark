@@ -2,27 +2,48 @@
 description: Ingest CSV data in Spark using pySpark.
 ---
 
-# Ingest CSV Data
+# Read and Manage CSV Data with Spark
+
+I am about to show you two ways to load CSV data into Spark and make it available for processing with high-level APIs.
+
+The first method uses low-level RDD API. It might be useful in many situations, especially if the data needs preliminary management before transforming it into a DataSet. The second and the third methods are somewhat similar. Thy just use different APIs. They both provide great flexibility and simplicity. 
+
+I will actually show you at the end a fourth method which is the probably the quickest and the easiest one, but is very limited in flexibility.
 
 Examples use following dataset: [https://archive.ics.uci.edu/ml/datasets/Individual+household+electric+power+consumption](https://archive.ics.uci.edu/ml/datasets/Individual+household+electric+power+consumption).
 
-### Use RDD API to Pre-process CSV Data
+### Method 1: CSV Pre-processing With RDD
 
-To create RDD from text file, use `SparkContext.textFile()`\` method. The resulting RDD contains one record for each line of the source file.
+In this recipe we will:
+
+1. Load CSV data into Spark RDD. We will do some exploration on the data:
+   1. Count number of records in RDD.
+   2. Inspect 5 records from the RDD.
+   3. Search RDD for data.
+2. Cleanse the Data by Removing Headers and Filter Out Missing Data
+3. Create Spark DataFrame for further exploration using DataFrame API
+4. Compute Summary Statistics on DataFrame
+
+#### Read CSV data into Spark RDD
+
+To create RDD from text file, use `SparkContext.textFile()`\` method. textFile\(\) method reads text file from any supported filesystem and returns an RDD of strings. Each element from the RDD contains a line, a record, from the source file.
 
 ```python
-dir_data = 'Datasets/data'
 # Create RDD from the text file
-rdd_raw_data = sc.textFile('{}/household_power_consumption.txt'.format(dir_data))
+rdd_raw_data = sc.textFile('dataset/household_power_consumption.txt')
 ```
 
-Let's do some exploration on the loaded data.
+#### Exploration: Count Number of Records in Spark RDD
+
+Let's do some exploration on the loaded data. Spark RDD exposes a method `.count()` which returns the number of records in the RDD. The `.count()` method is an action.
 
 ```python
 # Get the number of records in an RDD
 rdd_raw_data.count()
 #> 2075260
 ```
+
+#### Exploration: Inspect 5 Records from the Spark RDD
 
 ```python
 # Get the top 5 text lines from RDD
@@ -39,7 +60,13 @@ The output is as follows:
  '16/12/2006;17:27:00;5.388;0.502;233.740;23.000;0.000;1.000;17.000']
 ```
 
-Source data, includes missing data. It is marked with question mark: \`?\` 
+#### Exploration: Search RDD for Data
+
+Our source data includes missing values. These values are marked with a question mark '?'. It is not very practical to browse all the 2 million records to search for missing values. One way to search for the data is to filter the RDD.
+
+The RDD `.filter()` method takes as an argument a runnable, for example a lambda function. For simplicity I will refer to it as filter function. The filter function takes as an argument RDD element and returns boolean value, indicating if the element passes the filter. The filter function executed for each element in the RDD. A new RDD is returned, containing only elements from the original RDD for wich the filter function returned `True`.
+
+Searching our data for missing data could look like following:
 
 ```python
 # Filter RDD text records to see missing data
@@ -54,7 +81,17 @@ rdd_raw_data.filter(lambda row: row.find('?') >=0).take(5)
  '14/1/2007;18:36:00;?;?;?;?;?;?;']
 ```
 
-To cleanse the data we remove the header line and missing data:
+In this case we peek only 5 elements.
+
+#### Cleanse The RDD Records
+
+Let's store the header line into a variable.
+
+```python
+header = rdd_data.first()
+```
+
+To cleanse the data we remove the header line and missing data, using chained .filter\(\) method call:
 
 ```python
 # Remove Haders and Missing Data
@@ -72,9 +109,85 @@ rdd_data.show(5)
  '16/12/2006;17:28:00;3.666;0.528;235.680;15.800;0.000;1.000;17.000']
 ```
 
-#### Explore DataFrameReader API
+The first call of the .filter\(\) method removes the lines which match the header line and return an RDD with removed headers. The second .filter\(\) call is applied on the resulting RDD. It further filters out the records which contain a question mark. The result is a cleansed RDD. We store a reference to this RDD into the `rdd_data` variable.
 
-As a next step we want to convert the RDD to a DataFrame. There are many ways to achieve this. We are using `DataFrameReader` API. Interesting reference could be found [here](https://jaceklaskowski.gitbooks.io/mastering-spark-sql/spark-sql-DataFrameReader.html). Let's explore  the `.csv()` method.
+To inspect the result we use the `.show()` method on the cleansed RDD.
+
+#### Convert CSV RDD to DataFrame
+
+To accomplish this task I will use the DataFrameReader API. It provides reach functionality and makes parsing really easy.
+
+For best results, I prefer defining schema on the data by hand:
+
+```python
+from pyspark.sql.types import *
+schema = StructType([
+    StructField("Date", StringType(), True),
+    StructField("Time", StringType(), True),
+    StructField("Global_active_power", DecimalType(10,2)),
+    StructField("Global_reactive_power", DecimalType(10,2)),
+    StructField("Voltage", DecimalType(10,2)),
+    StructField("Global_intensity", DecimalType(10,2)),
+    StructField("Sub_metering_1", DecimalType(10,2)),
+    StructField("Sub_metering_2", DecimalType(10,2)),
+    StructField("Sub_metering_3", DecimalType(10,2))]
+```
+
+And finally the conversion to DataFrame with the first 5 records:
+
+```python
+df_data = spark.read.csv(rdd_data, schema=schema, sep=";")
+df_data.show(5)
+```
+
+```text
++----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
+|      Date|    Time|Global_active_power|Global_reactive_power|Voltage|Global_intensity|Sub_metering_1|Sub_metering_2|Sub_metering_3|
++----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
+|16/12/2006|17:24:00|               4.22|                 0.42| 234.84|           18.40|          0.00|          1.00|         17.00|
+|16/12/2006|17:25:00|               5.36|                 0.44| 233.63|           23.00|          0.00|          1.00|         16.00|
+|16/12/2006|17:26:00|               5.37|                 0.50| 233.29|           23.00|          0.00|          2.00|         17.00|
+|16/12/2006|17:27:00|               5.39|                 0.50| 233.74|           23.00|          0.00|          1.00|         17.00|
+|16/12/2006|17:28:00|               3.67|                 0.53| 235.68|           15.80|          0.00|          1.00|         17.00|
++----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
+only showing top 5 rows
+```
+
+It is also possible to convert the RDD "manually":
+
+```python
+df_data = rdd_data.map(lambda r: r.split(';')).toDF(schema)
+```
+
+#### Exploration: Compute Summary \(Descriptive\) Statistics on Dataset 
+
+Spark DataFrame API provides convenient way for computing basic summary statistics for a DataFrame.  The describe\(\) method computes basic statistics for numeric and string columns. The result is a new DataFrame, which contains the result:
+
+* count
+* mean - Applicable only for numeric columns.
+* stddev - Applicable only for numeric columns
+* min
+* max
+
+```python
+df_data.describe().show()
+```
+
+```text
++-------+--------+--------+-------------------+---------------------+-----------------+------------------+------------------+------------------+-----------------+
+|summary|    Date|    Time|Global_active_power|Global_reactive_power|          Voltage|  Global_intensity|    Sub_metering_1|    Sub_metering_2|   Sub_metering_3|
++-------+--------+--------+-------------------+---------------------+-----------------+------------------+------------------+------------------+-----------------+
+|  count| 2049280| 2049280|            2049280|              2049280|          2049280|           2049280|           2049280|           2049280|          2049280|
+|   mean|    null|    null| 1.0916150365005446|  0.12371447630388221|240.8398579745135| 4.627759310588324|1.1219233096502186|1.2985199679887571| 6.45844735712055|
+| stddev|    null|    null| 1.0572941610939892|  0.11272197955071642|3.239986679009991|4.4443962597861795| 6.153031089701349| 5.822026473177558|8.437153908665477|
+|    min|1/1/2007|00:00:00|              0.076|                0.000|          223.200|             0.200|             0.000|             0.000|            0.000|
+|    max|9/9/2010|23:59:00|              9.994|                1.390|          254.150|             9.800|             9.000|             9.000|            9.000|
++-------+--------+--------+-------------------+---------------------+-----------------+------------------+------------------+------------------+-----------------+
+```
+
+#### Advanced: DataFrameReader API
+
+This is somewhat advanced information. The purpose is to show you how you can find information about the API from Jupiter notebook. Interesting `DataFrameReader` API reference could be found [here](https://jaceklaskowski.gitbooks.io/mastering-spark-sql/spark-sql-DataFrameReader.html). Let's explore  the `.csv()` method.
 
 ```python
 # This works in Jupyter notebook
@@ -169,42 +282,161 @@ This function will go through the input once to determine the input schema if
 
 ```
 
-#### Convert RDD with CSV lines to DataFrame
 
-We first define schema for the DataFrame:
+
+### Method 2. Load CSV Data Using DataFrameReader API
+
+We already explored the DataFrameReader API to convert our RDD into a nice DataFrame. The DataFrameReader API provides much more rich functionalities, including schema inference and many more. Here's how I'm gonna use it.
 
 ```python
-from pyspark.sql.types import *
-schema = StructType([
-    StructField("Date", StringType(), True),
-    StructField("Time", StringType(), True),
-    StructField("Global_active_power", DecimalType(10,2)),
-    StructField("Global_reactive_power", DecimalType(10,2)),
-    StructField("Voltage", DecimalType(10,2)),
-    StructField("Global_intensity", DecimalType(10,2)),
-    StructField("Sub_metering_1", DecimalType(10,2)),
-    StructField("Sub_metering_2", DecimalType(10,2)),
-    StructField("Sub_metering_3", DecimalType(10,2))])
+df_data = spark.read.format("csv")  \
+    .option('delimiter', ';') \
+    .option("header", True)  \
+    .option('inferSchema', True) \
+    .load('dataset/household_power_consumption.txt')
 ```
 
-To convert the RDD with CSV lines into a DataFrame:
+I believe the above example is pretty much self-explanatory. We read data in CSV format. Fields are delimited by semicolon \(`;`\). The column names are in a header line. We leave Spark to figure out the schema. 
+
+We can define a temporary  view on the DataFrame and start querying it with SparkSql or DataFrame API.
 
 ```python
-df_data = spark.read.csv(rdd_data, schema=schema, sep=";")
-df_data.show(5)
+df_data.createOrReplaceTempView('power_consumption')
+spark.sql('SELECT COUNT(*) FROM power_consumption').show()
+```
+
+```text
++--------+
+|count(1)|
++--------+
+| 2075259|
++--------+
+```
+
+And an example, using the DataFrame API:
+
+```python
+from pyspark.sql.functions import *
+
+r = df_data.groupBy('Date').count().show(5)
+```
+
+```text
++----------+-----+
+|      Date|count|
++----------+-----+
+| 30/1/2007| 1440|
+| 13/2/2007| 1440|
+|19/11/2007| 1440|
+| 12/1/2008| 1440|
+| 26/2/2008| 1440|
++----------+-----+
+only showing top 5 rows
+```
+
+For more info on the Spark DataFrame API, refer to the [documentation](http://spark.apache.org/docs/2.2.0/api/python/pyspark.sql.html#module-pyspark.sql.functions).
+
+#### Explore: What is the Schema of the DataFrame
+
+Spark provides convenient way for inspecting the DataFrame's schema. It is very useful in situations where the DataFrame holds complex , deeply nested data structures.
+
+```python
+df_data.printSchema()
+```
+
+```text
+root
+ |-- Date: string (nullable = true)
+ |-- Time: string (nullable = true)
+ |-- Global_active_power: string (nullable = true)
+ |-- Global_reactive_power: string (nullable = true)
+ |-- Voltage: string (nullable = true)
+ |-- Global_intensity: string (nullable = true)
+ |-- Sub_metering_1: string (nullable = true)
+ |-- Sub_metering_2: string (nullable = true)
+ |-- Sub_metering_3: double (nullable = true)
+```
+
+You can also get the schema as JSON:
+
+```python
+df_data.schema.json()
+```
+
+```text
+'{"fields":[{"metadata":{},"name":"Date","nullable":true,"type":"string"},{"metadata":{},"name":"Time","nullable":true,"type":"string"},{"metadata":{},"name":"Global_active_power","nullable":true,"type":"string"},{"metadata":{},"name":"Global_reactive_power","nullable":true,"type":"string"},{"metadata":{},"name":"Voltage","nullable":true,"type":"string"},{"metadata":{},"name":"Global_intensity","nullable":true,"type":"string"},{"metadata":{},"name":"Sub_metering_1","nullable":true,"type":"string"},{"metadata":{},"name":"Sub_metering_2","nullable":true,"type":"string"},{"metadata":{},"name":"Sub_metering_3","nullable":true,"type":"double"}],"type":"struct"}'
+```
+
+This method is very convenient when you want to serialize/deserialize the schema.
+
+#### Get Pretty JSON Schema
+
+To produce much more human-readable JSON schema, I use json utilities, provided by Python:
+
+```python
+import json
+print(json.dumps(json.loads(df_data.schema.json()), indent=2))
+```
+
+```text
+{
+  "fields": [
+    {
+      "metadata": {},
+      "name": "Date",
+      "nullable": true,
+      "type": "string"
+    },
+...................
+```
+
+
+
+#### Method 3: Create SparkSql Table
+
+```python
+spark.sql("""DROP TABLE IF EXISTS power_consumption""")
+spark.sql("""
+  CREATE TABLE power_consumption 
+    USING CSV
+    OPTIONS ( delimiter ";", header "true")
+    LOCATION 'Datasets/data/household_power_consumption.txt'
+""")
+
+spark.sql("SELECT * FROM power_consumption").show(3)
 ```
 
 ```text
 +----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
 |      Date|    Time|Global_active_power|Global_reactive_power|Voltage|Global_intensity|Sub_metering_1|Sub_metering_2|Sub_metering_3|
 +----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
-|16/12/2006|17:24:00|               4.22|                 0.42| 234.84|           18.40|          0.00|          1.00|         17.00|
-|16/12/2006|17:25:00|               5.36|                 0.44| 233.63|           23.00|          0.00|          1.00|         16.00|
-|16/12/2006|17:26:00|               5.37|                 0.50| 233.29|           23.00|          0.00|          2.00|         17.00|
-|16/12/2006|17:27:00|               5.39|                 0.50| 233.74|           23.00|          0.00|          1.00|         17.00|
-|16/12/2006|17:28:00|               3.67|                 0.53| 235.68|           15.80|          0.00|          1.00|         17.00|
+|16/12/2006|17:24:00|              4.216|                0.418|234.840|          18.400|         0.000|         1.000|          17.0|
+|16/12/2006|17:25:00|              5.360|                0.436|233.630|          23.000|         0.000|         1.000|          16.0|
+|16/12/2006|17:26:00|              5.374|                0.498|233.290|          23.000|         0.000|         2.000|          17.0|
 +----------+--------+-------------------+---------------------+-------+----------------+--------------+--------------+--------------+
-only showing top 5 rows
+only showing top 3 rows
+```
+
+
+
+#### Method 4: Direct SparkSql Query
+
+Finally the promised direct query method. I generated a users file from http://randomuser.me. 
+
+```python
+spark.sql("SELECT * FROM csv.`../data/user/user*.csv`").describe().show()
+```
+
+```text
++-------+-----+-------+----------+--------------------+
+|summary|  _c0|    _c1|       _c2|                 _c3|
++-------+-----+-------+----------+--------------------+
+|  count|   11|     11|        11|                  11|
+|   mean| null|   null|      null|                null|
+| stddev| null|   null|      null|                null|
+|    min| miss| amelia|de krijger|amelia.gibson@exa...|
+|    max|title|wiepkje|      webb|wiepkje.vantienen...|
++-------+-----+-------+----------+--------------------+
 ```
 
 
