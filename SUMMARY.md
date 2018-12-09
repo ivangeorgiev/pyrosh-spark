@@ -26,3 +26,7 @@
 
 * [Resources and Topics to Explore](for-exploration/resources-and-topics-to-explore.md)
 
+## Hive
+
+* [General ORC Information](hive/general-orc-information.md)
+
