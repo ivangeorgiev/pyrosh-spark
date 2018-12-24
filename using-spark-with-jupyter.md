@@ -4,6 +4,7 @@
 This document is created as Jupyter Notebook and is available in different formats through export:
 * [Using Spark with Jupyter - HTML](using-spark-with-jupyter.html)
 * [Using Spark with Jupyter - Markdown](using-spark-with-jupyter.md)
+* [Using Spark with Jupyter - PDF](using-spark-with-jupyter.pdf)
 * [Using Spark with Jupyter - Jupyter Notebook .ipynb](using-spark-with-jupyter.ipynb)
 
 ## Run Jupyter with Spark in Docker Container
