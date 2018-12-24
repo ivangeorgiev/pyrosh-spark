@@ -7,6 +7,10 @@
 * [CSV](csv.md)
 * [Unit Testing pySpark Jobs](untitled.md)
 
+## Introduction to Spark with Python
+
+* [Welcome to Introduction to Spark with Python](introduction-spark-with-python/README.md)
+
 ## Ingest Data
 
 * [Read and Manage CSV Data with Spark](ingest-data/ingest-csv-data.md)
