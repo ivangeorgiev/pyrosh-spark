@@ -1,4 +1,19 @@
+---
+typora-copy-images-to: res
+typora-root-url: ./
+---
+
 # Using Spark with Jupyter
+
+## Run Jupyter with Spark in Docker Container
+
+Once you install docker, start a Jupyter container with spark.
+
+```
+> docker run -d --rm -p 18888:8888 -e GRANT_SUDO=yes -v C:\Sandbox\notebooks:/home/jovyan --name notebook jupyter/all-spark-notebook
+```
+
+
 
 ## Install Spark with Jupyter on Windows
 
@@ -108,13 +123,7 @@ Press `Ctrl-Z` to exit.
 
 ### 7. Start Jupyter Notebook
 
-Navigate to your notebook directory (`C:\Sandbox\notebook`) and start Jupyter:
-
-```bash
-jupyter notebook
-```
-
-Create a new Python 3 notebook and execute following into a cell:
+Create a Spark bootstrap script `spark.py`:
 
 ```python
 import os
@@ -135,6 +144,30 @@ def get_spark(appName = 'HelloWorld'):
 
 spark = get_spark()
 ```
+
+
+
+Navigate to your notebook directory (`C:\Sandbox\notebook`) and start Jupyter:
+
+```bash
+jupyter notebook
+```
+
+Create a new Python 3 notebook and execute following into a cell:
+
+```python
+%run spark.py
+```
+
+Inspect the `spark` variable:
+
+```python
+spark
+```
+
+![1545576527590](res/1545576527590.png)
+
+
 
 In next cell you can run:
 

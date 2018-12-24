@@ -30,3 +30,7 @@
 
 * [General ORC Information](hive/general-orc-information.md)
 
+## Python
+
+* [Parse Excel Files with Python](python/parse-excel-files-python.html) [[HTML](python/parse-excel-files-python.html), [Markdown](python/parse-excel-files-python.md), [Jupyter Notebook](python/parse-excel-files-python.ipynb)]
+
