@@ -33,5 +33,5 @@
 
 ## Python
 
-* [Parse Excel Files with Python](python/parse-excel-files-python.html) [[HTML](python/parse-excel-files-python.html), [Markdown](python/parse-excel-files-python.md), [Jupyter Notebook](python/parse-excel-files-python.ipynb)]
+* [Parse Excel Files with Python](python/parse-excel-files-python.md) [[HTML](python/parse-excel-files-python.html), [Markdown](python/parse-excel-files-python.md), [Jupyter Notebook](python/parse-excel-files-python.ipynb)]
 
