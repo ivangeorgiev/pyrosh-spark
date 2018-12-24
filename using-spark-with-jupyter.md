@@ -1,9 +1,10 @@
----
-typora-copy-images-to: res
-typora-root-url: ./
----
 
-# Using Spark with Jupyter
+# Using Spark with Jupiter
+
+This document is created as Jupyter Notebook and is available in different formats through export:
+* [Using Spark with Jupyter - HTML](using-spark-with-jupyter.html)
+* [Using Spark with Jupyter - Markdown](using-spark-with-jupyter.md)
+* [Using Spark with Jupyter - Jupyter Notebook .ipynb](using-spark-with-jupyter.ipynb)
 
 ## Run Jupyter with Spark in Docker Container
 
@@ -12,8 +13,6 @@ Once you install docker, start a Jupyter container with spark.
 ```
 > docker run -d --rm -p 18888:8888 -e GRANT_SUDO=yes -v C:\Sandbox\notebooks:/home/jovyan --name notebook jupyter/all-spark-notebook
 ```
-
-
 
 ## Install Spark with Jupyter on Windows
 
@@ -121,9 +120,15 @@ Start `pyspark` and execute simple program
 
 Press `Ctrl-Z` to exit.
 
+
+
 ### 7. Start Jupyter Notebook
 
-Create a Spark bootstrap script `spark.py`:
+Create a Spark bootstrap script and place it in `spark.py` file:
+
+```python
+
+
 
 ```python
 import os
@@ -143,9 +148,8 @@ def get_spark(appName = 'HelloWorld'):
     return spark
 
 spark = get_spark()
+
 ```
-
-
 
 Navigate to your notebook directory (`C:\Sandbox\notebook`) and start Jupyter:
 
@@ -161,52 +165,308 @@ Create a new Python 3 notebook and execute following into a cell:
 
 Inspect the `spark` variable:
 
+
 ```python
 spark
 ```
 
-![1545576527590](res/1545576527590.png)
 
 
 
-In next cell you can run:
+
+            <div>
+                <p><b>SparkSession - in-memory</b></p>
+                
+        <div>
+            <p><b>SparkContext</b></p>
+
+            <p><a href="http://LYOGA:4040">Spark UI</a></p>
+
+            <dl>
+              <dt>Version</dt>
+                <dd><code>v2.4.0</code></dd>
+              <dt>Master</dt>
+                <dd><code>local[4]</code></dd>
+              <dt>AppName</dt>
+                <dd><code>Hello World</code></dd>
+            </dl>
+        </div>
+        
+            </div>
+        
+
+
+
+In a new cell you can run simple Spark program:
+
 
 ```python
 spark.range(5).toDF('num').show()
 ```
 
+    +---+
+    |num|
+    +---+
+    |  0|
+    |  1|
+    |  2|
+    |  3|
+    |  4|
+    +---+
+    
+    
+
+## Use `findspark` Package
+
+`findspark` package provides `findspark.init()` function to make pyspark importable as a regular library. 
+
+For more information on the package, see the [findspark github](https://github.com/minrk/findspark) page.
+
+First install the findspark package.
+
+```bash
+pip install findspark
 ```
-+---+
-|num|
-+---+
-|  0|
-|  1|
-|  2|
-|  3|
-|  4|
-+---+
+
+
+```python
+import findspark
 ```
+
+By default `findspark` uses the `SPARK_HOME` environment variable. To override this behavior, specify spark home directory:
+
+```python
+findspark.init('/path/to/spark')
+```
+
+
+```python
+# Use SPARK_HOME
+findspark.init()
+```
+
+
+```python
+# Check where Spark is found
+findspark.find()
+```
+
+
+
+
+    'C:\\apps\\spark-2.4.0-bin-hadoop2.7'
+
+
+
+Now Spark packages can be accessed using `import`.
+
+
+```python
+from pyspark.sql import SparkSession
+```
+
+
+```python
+spark = SparkSession.builder.master('local[4]').appName("Hello World").getOrCreate()
+
+# Inspect SparkSession
+
+spark
+```
+
+
+
+
+
+            <div>
+                <p><b>SparkSession - in-memory</b></p>
+                
+        <div>
+            <p><b>SparkContext</b></p>
+
+            <p><a href="http://LYOGA:4040">Spark UI</a></p>
+
+            <dl>
+              <dt>Version</dt>
+                <dd><code>v2.4.0</code></dd>
+              <dt>Master</dt>
+                <dd><code>local[4]</code></dd>
+              <dt>AppName</dt>
+                <dd><code>Hello World</code></dd>
+            </dl>
+        </div>
+        
+            </div>
+        
+
 
 
 
 ```python
-#This is an early version
-import os
-import sys
-
-spark_home = os.environ.get('SPARK_HOME', None)
-# print(spark_home)
-# > C:\apps\spark-2.4.0-bin-hadoop2.7
-
-sys.path.append(spark_home + '/python')
-sys.path.append(spark_home + '/python/lib/py4j-0.10.7-src.zip')
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.appName("HelloWorld").getOrCreate()
-
-# sc = spark.sparkContext
-# nums = sc.parallelize([1,2,3,4])
-# nums.collect()
-
-spark.range(5).toDF("num").show()
+# Inspect SparkContext, associated with the session
+spark.sparkContext
 ```
 
+
+
+
+
+        <div>
+            <p><b>SparkContext</b></p>
+
+            <p><a href="http://LYOGA:4040">Spark UI</a></p>
+
+            <dl>
+              <dt>Version</dt>
+                <dd><code>v2.4.0</code></dd>
+              <dt>Master</dt>
+                <dd><code>local[4]</code></dd>
+              <dt>AppName</dt>
+                <dd><code>Hello World</code></dd>
+            </dl>
+        </div>
+        
+
+
+
+
+```python
+# Get configuration for the SparkContext
+spark.sparkContext.getConf().getAll()
+```
+
+
+
+
+    [('spark.app.name', 'Hello World'),
+     ('spark.master', 'local[4]'),
+     ('spark.rdd.compress', 'True'),
+     ('spark.serializer.objectStreamReset', '100'),
+     ('spark.driver.port', '60942'),
+     ('spark.executor.id', 'driver'),
+     ('spark.submit.deployMode', 'client'),
+     ('spark.driver.host', 'LYOGA'),
+     ('spark.ui.showConsoleProgress', 'true'),
+     ('spark.app.id', 'local-1545656532472')]
+
+
+
+
+```python
+# What is available as methods and attributes for SparkContext
+dir(spark.sparkContext)
+```
+
+
+
+
+    ['PACKAGE_EXTENSIONS',
+     '__class__',
+     '__delattr__',
+     '__dict__',
+     '__dir__',
+     '__doc__',
+     '__enter__',
+     '__eq__',
+     '__exit__',
+     '__format__',
+     '__ge__',
+     '__getattribute__',
+     '__getnewargs__',
+     '__gt__',
+     '__hash__',
+     '__init__',
+     '__init_subclass__',
+     '__le__',
+     '__lt__',
+     '__module__',
+     '__ne__',
+     '__new__',
+     '__reduce__',
+     '__reduce_ex__',
+     '__repr__',
+     '__setattr__',
+     '__sizeof__',
+     '__str__',
+     '__subclasshook__',
+     '__weakref__',
+     '_accumulatorServer',
+     '_active_spark_context',
+     '_batchSize',
+     '_callsite',
+     '_checkpointFile',
+     '_conf',
+     '_dictToJavaMap',
+     '_do_init',
+     '_encryption_enabled',
+     '_ensure_initialized',
+     '_gateway',
+     '_getJavaStorageLevel',
+     '_initialize_context',
+     '_javaAccumulator',
+     '_jsc',
+     '_jvm',
+     '_lock',
+     '_next_accum_id',
+     '_pickled_broadcast_vars',
+     '_python_includes',
+     '_repr_html_',
+     '_serialize_to_jvm',
+     '_temp_dir',
+     '_unbatched_serializer',
+     'accumulator',
+     'addFile',
+     'addPyFile',
+     'appName',
+     'applicationId',
+     'binaryFiles',
+     'binaryRecords',
+     'broadcast',
+     'cancelAllJobs',
+     'cancelJobGroup',
+     'defaultMinPartitions',
+     'defaultParallelism',
+     'dump_profiles',
+     'emptyRDD',
+     'environment',
+     'getConf',
+     'getLocalProperty',
+     'getOrCreate',
+     'hadoopFile',
+     'hadoopRDD',
+     'master',
+     'newAPIHadoopFile',
+     'newAPIHadoopRDD',
+     'parallelize',
+     'pickleFile',
+     'profiler_collector',
+     'pythonExec',
+     'pythonVer',
+     'range',
+     'runJob',
+     'sequenceFile',
+     'serializer',
+     'setCheckpointDir',
+     'setJobDescription',
+     'setJobGroup',
+     'setLocalProperty',
+     'setLogLevel',
+     'setSystemProperty',
+     'show_profiles',
+     'sparkHome',
+     'sparkUser',
+     'startTime',
+     'statusTracker',
+     'stop',
+     'textFile',
+     'uiWebUrl',
+     'union',
+     'version',
+     'wholeTextFiles']
+
+
+
+
+```python
+
+```
