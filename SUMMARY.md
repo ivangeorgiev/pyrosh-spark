@@ -1,6 +1,7 @@
 # Table of contents
 
 * [Initial page](README.md)
+* [Using Spark with Jupyter](using-spark-with-jupyter.md)
 * [Getting Started with PySpark](getting-started-with-pyspark.md)
 * [Data Management with pySpark](data-management-with-pyspark.md)
 * [CSV](csv.md)
